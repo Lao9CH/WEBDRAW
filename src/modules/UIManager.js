@@ -31,12 +31,21 @@ export class UIManager {
   }
 
   createToolbar() {
+    // 创建主工具栏
     this.toolbar = document.createElement('div');
     this.toolbar.className = 'web-canvas-toolbar';
     this.toolbar.style.display = 'none';
+    document.body.appendChild(this.toolbar);
+
+    // 创建右侧工具栏
+    this.rightToolbar = document.createElement('div');
+    this.rightToolbar.className = 'web-canvas-right-toolbar';
+    this.rightToolbar.style.display = 'none';
+    
+    this.rightToolbar.innerHTML = this.getRightToolbarHTML();
+    document.body.appendChild(this.rightToolbar);
     
     this.toolbar.innerHTML = this.getToolbarHTML();
-    document.body.appendChild(this.toolbar);
   }
 
   getToolbarHTML() {
@@ -81,6 +90,54 @@ export class UIManager {
     `;
   }
 
+  getRightToolbarHTML() {
+    return `
+      <div class="right-toolbar-group">
+        <button class="tool-button" data-tool="select" title="选择工具">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+          </svg>
+        </button>
+        
+        <button class="tool-button" data-tool="shape" title="形状工具">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          </svg>
+        </button>
+        
+        <button class="tool-button" data-tool="text" title="文本工具">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 7V4h16v3"></path>
+            <path d="M12 4v16"></path>
+            <path d="M7 20h10"></path>
+          </svg>
+        </button>
+        
+        <button class="tool-button" data-tool="undo" title="撤销">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 7v6h6"></path>
+            <path d="M3 13c0-4.97 4.03-9 9-9a9 9 0 0 1 9 9 9 9 0 0 1-9 9"></path>
+          </svg>
+        </button>
+        
+        <button class="tool-button" data-tool="redo" title="重做">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 7v6h-6"></path>
+            <path d="M21 13c0-4.97-4.03-9-9-9a9 9 0 0 0-9 9 9 9 0 0 0 9 9"></path>
+          </svg>
+        </button>
+        
+        <button class="tool-button" data-tool="save" title="保存">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+        </button>
+      </div>
+    `;
+  }
+
   createShapeLibrary() {
     const library = document.createElement('div');
     library.className = 'shape-library';
@@ -106,7 +163,7 @@ export class UIManager {
   }
 
   setupEventListeners() {
-    this.toggleButton.addEventListener('click', () => this.toggleDrawingMode());
+    this.toggleButton.addEventListener('click', () => this.toggleCanvas());
     
     this.canvasManager.canvas.addEventListener('mousedown', (e) => {
       this.canvasManager.startDrawing(e.clientX, e.clientY);
@@ -125,6 +182,36 @@ export class UIManager {
     });
     
     this.setupToolbarListeners();
+    
+    this.rightToolbar.addEventListener('click', (e) => {
+      const button = e.target.closest('.tool-button');
+      if (!button) return;
+      
+      const tool = button.dataset.tool;
+      
+      switch(tool) {
+        case 'select':
+          this.toolManager.setCurrentTool('select');
+          break;
+        case 'shape':
+          this.toggleShapeLibrary();
+          break;
+        case 'text':
+          this.toolManager.setCurrentTool('text');
+          break;
+        case 'undo':
+          this.canvasManager.undo();
+          break;
+        case 'redo':
+          this.canvasManager.redo();
+          break;
+        case 'save':
+          this.canvasManager.saveCanvas();
+          break;
+      }
+      
+      this.updateToolbarState();
+    });
   }
 
   setupToolbarListeners() {
@@ -167,17 +254,31 @@ export class UIManager {
     });
   }
 
-  toggleDrawingMode() {
+  toggleCanvas() {
     this.isEnabled = !this.isEnabled;
-    if (this.isEnabled) {
-      this.canvasManager.show();
-      this.toolbar.style.display = 'flex';
+    this.toggleButton.classList.toggle('active');
+    this.toolbar.style.display = this.isEnabled ? 'flex' : 'none';
+    this.rightToolbar.style.display = this.isEnabled ? 'flex' : 'none';
+    this.canvasManager.toggleCanvas(this.isEnabled);
+  }
+
+  updateToolbarState() {
+    const settings = this.toolManager.getToolSettings();
+    
+    // 更新所有工具按钮状态
+    const toolButtons = document.querySelectorAll('.tool-button');
+    toolButtons.forEach(button => {
+      const buttonTool = button.dataset.tool;
+      button.classList.toggle('active', buttonTool === settings.tool);
+    });
+  }
+
+  toggleShapeLibrary() {
+    if (this.shapeLibrary.style.display === 'none') {
       this.shapeLibrary.style.display = 'block';
+      this.toolManager.setCurrentTool('shape');
     } else {
-      this.canvasManager.hide();
-      this.toolbar.style.display = 'none';
       this.shapeLibrary.style.display = 'none';
     }
-    this.toggleButton.classList.toggle('active');
   }
 }
