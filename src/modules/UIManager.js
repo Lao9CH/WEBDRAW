@@ -148,13 +148,39 @@ export class UIManager {
   }
 
   getShapeLibraryHTML() {
-    const shapes = ['rectangle', 'circle', 'triangle', 'star', 'arrow', 'line'];
+    const shapes = [
+      {
+        name: 'rectangle',
+        svg: '<rect x="4" y="4" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"/>'
+      },
+      {
+        name: 'circle',
+        svg: '<circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="2"/>'
+      },
+      {
+        name: 'triangle',
+        svg: '<path d="M16 4 L28 28 L4 28 Z" fill="none" stroke="currentColor" stroke-width="2"/>'
+      },
+      {
+        name: 'arrow',
+        svg: '<path d="M4 16 L24 16 M18 8 L24 16 L18 24" fill="none" stroke="currentColor" stroke-width="2"/>'
+      },
+      {
+        name: 'line',
+        svg: '<line x1="4" y1="4" x2="28" y2="28" stroke="currentColor" stroke-width="2"/>'
+      },
+      {
+        name: 'text',
+        svg: '<text x="8" y="24" font-size="24" fill="currentColor">T</text>'
+      }
+    ];
+
     return `
       <div class="shape-grid">
         ${shapes.map(shape => `
-          <div class="shape-item" data-shape="${shape}">
+          <div class="shape-item" data-shape="${shape.name}">
             <svg width="32" height="32" viewBox="0 0 32 32">
-              <!-- Shape SVG paths would go here -->
+              ${shape.svg}
             </svg>
           </div>
         `).join('')}
