@@ -12,6 +12,7 @@ export class CanvasManager {
     this.points = [];        // 绘制点集合
     this.drawingMode = 'brush'; // 绘制模式
     this.startPoint = null;  // 起始点
+    this.drawingHistory = []; // 绘画历史
     
     this.init();
   }
@@ -22,6 +23,46 @@ export class CanvasManager {
   init() {
     this.createCanvas();
     window.addEventListener('resize', () => this.resizeCanvas());
+    // 加载保存的涂鸦
+    this.loadDrawings();
+  }
+
+  /**
+   * 保存当前绘画状态
+   */
+  saveDrawing() {
+    // 获取当前页面URL作为标识
+    const pageUrl = window.location.href;
+    // 获取画布数据
+    const imageData = this.canvas.toDataURL();
+    
+    // 使用Chrome存储API保存数据
+    chrome.storage.local.get('drawings', (result) => {
+      const drawings = result.drawings || {};
+      drawings[pageUrl] = imageData;
+      chrome.storage.local.set({ drawings });
+    });
+  }
+
+  /**
+   * 加载保存的涂鸦
+   */
+  loadDrawings() {
+    const pageUrl = window.location.href;
+    
+    chrome.storage.local.get('drawings', (result) => {
+      const drawings = result.drawings || {};
+      const savedDrawing = drawings[pageUrl];
+      
+      if (savedDrawing) {
+        // 创建临时图片加载保存的数据
+        const img = new Image();
+        img.onload = () => {
+          this.ctx.drawImage(img, 0, 0);
+        };
+        img.src = savedDrawing;
+      }
+    });
   }
 
   /**
@@ -72,6 +113,9 @@ export class CanvasManager {
     } else {
       this.drawShapePreview(x, y, settings);
     }
+    
+    // 每次绘制后保存状态
+    this.saveDrawing();
   }
 
   /**
@@ -150,6 +194,8 @@ export class CanvasManager {
    */
   clear() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // 清除后也保存状态
+    this.saveDrawing();
   }
 
   /**

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Web Canvas",
-  "description": "A professional web annotation tool with drawing capabilities",
+  "description": "一个专业的网页标注和绘画工具",
   "version": "1.0",
   "permissions": [
     "activeTab",
