@@ -32,24 +32,134 @@ export class UIManager {
 
   createToolbar() {
     this.toolbar = document.createElement('div');
-    this.toolbar.className = 'web-canvas-toolbar';
-    this.toolbar.style.display = 'none';
+    this.toolbar.className = 'web-canvas-toolbar collapsed';
     
-    this.toolbar.innerHTML = this.getToolbarHTML();
+    // 创建展开按钮（同时作为折叠按钮）
+    const toggleButton = document.createElement('button');
+    toggleButton.className = 'toggle-button';
+    toggleButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+      <circle cx="11" cy="11" r="2"></circle>
+    </svg>`;
+    
+    const toolbarContent = document.createElement('div');
+    toolbarContent.className = 'toolbar-content';
+    toolbarContent.innerHTML = this.getToolbarHTML();
+    
+    this.toolbar.appendChild(toggleButton);
+    this.toolbar.appendChild(toolbarContent);
     document.body.appendChild(this.toolbar);
+    
+    // 添加拖动功能
+    this.setupDraggable(this.toolbar);
+    
+    // 添加展开/折叠功能
+    let isExpanded = false;
+    const toggleToolbar = (e) => {
+      if (this.isDragging) return;
+      isExpanded = !isExpanded;
+      this.toolbar.classList.toggle('collapsed', !isExpanded);
+      
+      // 更新按钮图标
+      if (isExpanded) {
+        toggleButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 18L18 6M6 6l12 12"></path>
+        </svg>`;
+        toggleButton.style.color = '#666'; // 展开时使用深色图标
+      } else {
+        toggleButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+          <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+          <circle cx="11" cy="11" r="2"></circle>
+        </svg>`;
+        toggleButton.style.color = 'white'; // 折叠时使用白色图标
+      }
+      e.stopPropagation(); // 阻止事件冒泡
+    };
+
+    // 为按钮添加点击事件
+    toggleButton.addEventListener('click', toggleToolbar);
+    
+    // 为折叠状态下的工具栏添加点击事件
+    this.toolbar.addEventListener('click', (e) => {
+      if (!isExpanded && e.target === this.toolbar) {
+        toggleToolbar(e);
+      }
+    });
+  }
+
+  setupDraggable(element) {
+    let startX = 0, startY = 0;
+    let lastX = 0, lastY = 0;
+    this.isDragging = false;
+    const moveThreshold = 1; // 降低移动阈值，使拖动更灵敏
+    
+    const dragMouseDown = (e) => {
+      if (e.button !== 0) return; // 只响应左键
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // 记录初始位置
+      startX = e.clientX;
+      startY = e.clientY;
+      lastX = element.offsetLeft;
+      lastY = element.offsetTop;
+      
+      this.isDragging = false;
+      
+      document.addEventListener('mousemove', elementDrag, { passive: false });
+      document.addEventListener('mouseup', closeDragElement);
+    };
+
+    const elementDrag = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      requestAnimationFrame(() => {
+        // 计算移动距离
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        
+        // 如果移动距离大于阈值，设置拖动状态
+        if (Math.abs(dx) > moveThreshold || Math.abs(dy) > moveThreshold) {
+          this.isDragging = true;
+          element.style.left = (lastX + dx) + 'px';
+          element.style.top = (lastY + dy) + 'px';
+        }
+      });
+    };
+
+    const closeDragElement = () => {
+      document.removeEventListener('mousemove', elementDrag);
+      document.removeEventListener('mouseup', closeDragElement);
+      
+      // 短暂延时后重置拖动状态
+      setTimeout(() => {
+        this.isDragging = false;
+      }, 10);
+    };
+
+    element.addEventListener('mousedown', dragMouseDown);
   }
 
   getToolbarHTML() {
     return `
       <div class="tool-group">
+        <a href="http://192.168.6.89" target="_blank" class="tool-button link-button" title="访问服务器">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 5h14M5 12h14M5 19h14"/>
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+          </svg>
+        </a>
         <button class="tool-button active" data-tool="brush">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 19l7-7 3 3-7 7-3-3z"/>
           </svg>
         </button>
         <button class="tool-button" data-tool="eraser">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 20H7L3 16l8-8 8 8-4 4"></path>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 20H7L3 16c-1.5-1.5-1.5-3.5 0-5L14 0l7 7-11 11 3 3-1-1h8v-1"/>
           </svg>
         </button>
       </div>
